@@ -39,7 +39,7 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 		$this->assertTableNotExist('encryption_test');
 	}
 
-	public function testEncryptionTableDoesNotExist() {
+	public function xtestEncryptionTableDoesNotExist() {
 
 		$this->assertTableNotExist('encryption_test');
 
@@ -50,7 +50,38 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 
 	}
 
-	public function testDataMigration() {
+	public function checkLastIndexId() {
+		$query = \OC_DB::prepare('INSERT INTO `*PREFIX*share` ('
+			.' `item_type`, `item_source`, `item_target`, `share_type`,'
+			.' `share_with`, `uid_owner`, `permissions`, `stime`, `file_source`,'
+			.' `file_target`, `token`, `parent`, `expiration`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+		$query->bindValue(1, 'file');
+		$query->bindValue(2, 949);
+		$query->bindValue(3, '/949');
+		$query->bindValue(4, 0);
+		$query->bindValue(5, 'migrate-test-user');
+		$query->bindValue(6, 'migrate-test-owner');
+		$query->bindValue(7, 23);
+		$query->bindValue(8, 1402493312);
+		$query->bindValue(9, 0);
+		$query->bindValue(10, '/migration.txt');
+		$query->bindValue(11, null);
+		$query->bindValue(12, null);
+		$query->bindValue(13, null);
+		$this->assertEquals(1, $query->execute());
+
+		$this->assertNotEquals('0', \OC_DB::insertid('*PREFIX*share'));
+	}
+
+	public function testBrokenLastIndexId() {
+
+		// create test table
+		$this->checkLastIndexId();
+		OC_DB::createDbFromStructure(__DIR__ . '/encryption_table.xml');
+		$this->checkLastIndexId();
+	}
+
+	public function xtestDataMigration() {
 
 		//FIXME fix this test so that we can enable it again
 		$this->markTestIncomplete('Disabled, because of this tests a lot of other tests fail at the moment');
@@ -78,7 +109,7 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 		$this->assertEquals(1, $mig);
 	}
 
-	public function testDuplicateDataMigration() {
+	public function xtestDuplicateDataMigration() {
 
 		//FIXME fix this test so that we can enable it again
 		$this->markTestIncomplete('Disabled, because of this tests a lot of other tests fail at the moment');
