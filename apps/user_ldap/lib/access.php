@@ -834,7 +834,7 @@ class Access extends LDAPUtility implements user\IUserTools {
 	private function count($filter, $base, $attr = null, $limit = null, $offset = null, $skipHandling = false) {
 		\OCP\Util::writeLog('user_ldap', 'Count filter:  '.print_r($filter, true), \OCP\Util::DEBUG);
 
-		if(is_null($limit)) {
+		if(is_null($limit) || $limit <= 0) {
 			$limit = intval($this->connection->ldapPagingSize);
 		}
 
@@ -894,6 +894,10 @@ class Access extends LDAPUtility implements user\IUserTools {
 	 * @return array with the search result
 	 */
 	private function search($filter, $base, $attr = null, $limit = null, $offset = null, $skipHandling = false) {
+		if($limit <= 0) {
+			//otherwise search will fail
+			$limit = null;
+		}
 		$search = $this->executeSearch($filter, $base, $attr, $limit, $offset);
 		if($search === false) {
 			return array();

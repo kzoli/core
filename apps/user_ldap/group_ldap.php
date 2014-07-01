@@ -50,20 +50,30 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		if(!$this->enabled) {
 			return false;
 		}
-		if($this->access->connection->isCached('inGroup'.$uid.':'.$gid)) {
-			return $this->access->connection->getFromCache('inGroup'.$uid.':'.$gid);
+		$cacheKey = 'inGroup'.$uid.':'.$gid;
+		if($this->access->connection->isCached($cacheKey)) {
+			return $this->access->connection->getFromCache($cacheKey);
 		}
-		$dn_user = $this->access->username2dn($uid);
-		$dn_group = $this->access->groupname2dn($gid);
+
+		$userDN = $this->access->username2dn($uid);
+		$groupDN = $this->access->groupname2dn($gid);
 		// just in case
-		if(!$dn_group || !$dn_user) {
-			$this->access->connection->writeToCache('inGroup'.$uid.':'.$gid, false);
+		if(!$groupDN || !$userDN) {
+			$this->access->connection->writeToCache($cacheKey, false);
 			return false;
 		}
+
+		//check primary groups first
+		$userPrimaryGroups = $this->getUserPrimaryGroups($userDN);
+		if(in_array($gid, $userPrimaryGroups)) {
+			$this->access->connection->writeToCache($cacheKey, true);
+			return true;
+		}
+
 		//usually, LDAP attributes are said to be case insensitive. But there are exceptions of course.
-		$members = array_keys($this->_groupMembers($dn_group));
+		$members = array_keys($this->_groupMembers($groupDN));
 		if(!$members) {
-			$this->access->connection->writeToCache('inGroup'.$uid.':'.$gid, false);
+			$this->access->connection->writeToCache($cacheKey, false);
 			return false;
 		}
 
@@ -82,8 +92,8 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 			$members = $dns;
 		}
 
-		$isInGroup = in_array($dn_user, $members);
-		$this->access->connection->writeToCache('inGroup'.$uid.':'.$gid, $isInGroup);
+		$isInGroup = in_array($userDN, $members);
+		$this->access->connection->writeToCache($cacheKey, $isInGroup);
 
 		return $isInGroup;
 	}
@@ -126,6 +136,147 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 	}
 
 	/**
+	 * translates a primary group ID into an ownCloud internal name
+	 * @param string $attr the attribute belonging to the group id
+	 * @param string $gid
+	 * @return string|bool
+	 */
+	public function primaryGroupID2Name($attr, $gid) {
+		$cacheKey = 'primaryGroupIDtoName';
+		if($this->access->connection->isCached($cacheKey)) {
+			$groupNames = $this->access->connection->getFromCache($cacheKey);
+			if(isset($groupNames[$gid])) {
+				return $groupNames[$gid];
+			}
+		}
+
+		//we need to get the DN from LDAP
+		if($attr === 'primaryGroupID') {
+			$searchAttr = 'primaryGroupToken';
+		} else {
+			//gidNumber is always the same
+			$searchAttr = $attr;
+		}
+		$filter = $this->access->combineFilterWithAnd(array(
+			$this->access->connection->ldapGroupFilter,
+			$searchAttr . '=' . $gid
+		));
+		$result = $this->access->searchGroups($filter, $dn, 1);
+		if(empty($result)) {
+			return false;
+		}
+		$dn = $result[0];
+
+		//and now the groupname
+		//NOTE once we have seperate ownCloud group IDs and group names we can
+		//directly read the display name attribute instead of the DN
+		$name = $this->dn2groupname($dn);
+
+		//cache and return
+		if(!isset($groupNames)) {
+			$groupNames = array();
+		}
+		$groupNames[$gid] = $name;
+		$this->access->connection->writeToCache($cacheKey, $groupNames);
+		return $name;
+	}
+
+	/**
+	 * returns the entry's primary groups IDs per attribute
+	 * @param string $dn
+	 * @param string[] $attributes
+	 * @return array having the pattern attribute => value
+	 */
+	private function getEntryGroupID($dn, $attributes) {
+		$result = array();
+		foreach($attributes as $attr) {
+			$value = $this->access->readAttribute($dn, $attr);
+			if(is_array($value) && !empty($value)) {
+				$result[$attr] = $value;
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * returns the group's IDs per attribute
+	 * @param string $dn
+	 * @return array
+	 */
+	public function getGroupPrimaryGroupIDs($dn) {
+		$gidAttributes = array('gidNumber', 'primaryGroupToken');
+		return $this->getEntryGroupID($dn, $gidAttributes);
+	}
+
+	/**
+	 * returns the users's primary group IDs per attribute
+	 * @param string $dn
+	 * @return array
+	 */
+	public function getUserPrimaryGroupIDs($dn) {
+		$gidAttributes = array('gidNumber', 'primaryGroupID');
+		return $this->getEntryGroupID($dn, $gidAttributes);
+	}
+
+	/**
+	 * returns a list of users that have the given group as primary group
+	 * @param string $groupDN
+	 * @return string[]
+	 */
+	public function getUsersInPrimaryGroup($groupDN, $limit = -1, $offset = 0) {
+		$groupIDs = $this->getGroupPrimaryGroupIDs($groupDN);
+		if(empty($groupIDs)) {
+			return array();
+		}
+
+		$filterParts = array();
+		foreach($groupIDs as $attr => $gid) {
+			if($attr === 'primaryGroupToken') {
+				$searchAttr = 'primaryGroupID';
+			} else {
+				//gidNumber is always the same
+				$searchAttr = $attr;
+			}
+			$filterParts[] = $searchAttr . '=' . $gid;
+		}
+		$filter = $this->access->combineFilterWithAnd(array(
+			$this->access->connection->ldapUserFilter,
+			$this->access->combineFilterWithOr($filterParts)
+		));
+
+		$users = $this->access->fetchListOfUsers(
+			$filter,
+			array($this->access->connection->ldapUserDisplayName, 'dn'),
+			$limit,
+			$offset
+		);
+
+		return $users;
+	}
+
+	/**
+	 * gets the primary groups of a user
+	 * @param string $dn
+	 * @return string[]
+	 */
+	public function getUserPrimaryGroups($dn) {
+		$groupIDs = $this->getUserPrimaryGroupIDs($dn);
+		if(empty($groupIDs)) {
+			return array();
+		}
+
+		$groups = array();
+		foreach($groupIDs as $attr => $gid) {
+			$groupName = $this->primaryGroupID2Name($attr, $gid);
+			if($groupName !== false) {
+				$groups[] = $groupName;
+			}
+		}
+
+		return $groups;
+	}
+
+	/**
 	 * Get all groups a user belongs to
 	 * @param string $uid Name of the user
 	 * @return array with group names
@@ -161,7 +312,9 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		}
 
 		$groups = array_values($this->getGroupsByMember($uid));
+		$groups = array_merge($groups, $this->getUserPrimaryGroups($userDN));
 		$groups = array_unique($this->access->ownCloudGroupNames($groups), SORT_LOCALE_STRING);
+
 		$this->access->connection->writeToCache($cacheKey, $groups);
 
 		return $groups;
@@ -276,9 +429,15 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 				}
 			}
 		}
+
 		natsort($groupUsers);
 		$this->access->connection->writeToCache('usersInGroup-'.$gid.'-'.$search, $groupUsers);
 		$groupUsers = array_slice($groupUsers, $offset, $limit);
+
+		//and get users that have the group as primary
+		$primaryUsers = $this->getUsersInPrimaryGroup($groupDN, $limit, $offset);
+		$groupUsers = array_unique(array_merge($groupUsers, $primaryUsers));
+
 		$this->access->connection->writeToCache($cachekey, $groupUsers);
 
 		return $groupUsers;
@@ -359,6 +518,10 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 			}
 		}
 
+		//and get users that have the group as primary
+		$primaryUsers = $this->getUsersInPrimaryGroup($groupDN);
+		$groupUsers = array_unique(array_merge($groupUsers, $primaryUsers));
+
 		return count($groupUsers);
 	}
 
@@ -417,7 +580,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		$pagingsize = $this->access->connection->ldapPagingSize;
 		if ((! $this->access->connection->hasPagedResultSupport)
 		   	|| empty($pagingsize)) {
-			return $this->getGroupsChunk($search, $limit, $offset);
+			$this->getGroupsChunk($search, $limit, $offset);
 		}
 		$maxGroups = 100000; // limit max results (just for safety reasons)
 		if ($limit > -1) {
