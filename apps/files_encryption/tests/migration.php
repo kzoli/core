@@ -39,7 +39,7 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 		$this->assertTableNotExist('encryption_test');
 	}
 
-	public function xtestEncryptionTableDoesNotExist() {
+	public function testEncryptionTableDoesNotExist() {
 
 		$this->assertTableNotExist('encryption_test');
 
@@ -81,10 +81,7 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 		$this->checkLastIndexId();
 	}
 
-	public function xtestDataMigration() {
-
-		//FIXME fix this test so that we can enable it again
-		$this->markTestIncomplete('Disabled, because of this tests a lot of other tests fail at the moment');
+	public function testDataMigration() {
 
 		$this->assertTableNotExist('encryption_test');
 
@@ -109,10 +106,7 @@ class Test_Migration extends PHPUnit_Framework_TestCase {
 		$this->assertEquals(1, $mig);
 	}
 
-	public function xtestDuplicateDataMigration() {
-
-		//FIXME fix this test so that we can enable it again
-		$this->markTestIncomplete('Disabled, because of this tests a lot of other tests fail at the moment');
+	public function testDuplicateDataMigration() {
 
 		// create test table
 		OC_DB::createDbFromStructure(__DIR__ . '/encryption_table.xml');
