@@ -148,12 +148,19 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 			}
 		}
 
+		$domainDN = $this->access->getDomainDNFromDN($this->access->connection->ldapBaseGroups[0]);
+		$objectSid = $this->access->readAttribute($domainDN, 'objectsid');
+		if(!is_array($objectSid) || empty($objectSid)) {
+			return false;
+		}
+		$domainObjectSid = $this->access->convertSID2Str($objectSid[0]);
+
 		//we need to get the DN from LDAP
 		$filter = $this->access->combineFilterWithAnd(array(
 			$this->access->connection->ldapGroupFilter,
-			'primaryGroupToken=' . $gid
+			'objectsid=' . $domainObjectSid . '-' . $gid
 		));
-		$result = $this->access->searchGroups($filter, $dn, 1);
+		$result = $this->access->searchGroups($filter, array('dn'), 1);
 		if(empty($result)) {
 			return false;
 		}
@@ -162,7 +169,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		//and now the groupname
 		//NOTE once we have seperate ownCloud group IDs and group names we can
 		//directly read the display name attribute instead of the DN
-		$name = $this->dn2groupname($dn);
+		$name = $this->access->dn2groupname($dn);
 
 		//cache and return
 		if(!isset($groupNames)) {
@@ -170,6 +177,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		}
 		$groupNames[$gid] = $name;
 		$this->access->connection->writeToCache($cacheKey, $groupNames);
+
 		return $name;
 	}
 
@@ -284,12 +292,14 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		}
 
 		$groups = array_values($this->getGroupsByMember($uid));
+		$groups = $this->access->ownCloudGroupNames($groups);
+
 		$primaryGroup = $this->getUserPrimaryGroup($userDN);
 		if($primaryGroup !== false) {
 			$groups[] = $primaryGroup;
 		}
-		$groups = array_unique($this->access->ownCloudGroupNames($groups), SORT_LOCALE_STRING);
 
+		$groups = array_unique($groups, SORT_LOCALE_STRING);
 		$this->access->connection->writeToCache($cacheKey, $groups);
 
 		return $groups;

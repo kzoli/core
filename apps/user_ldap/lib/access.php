@@ -181,6 +181,29 @@ class Access extends LDAPUtility implements user\IUserTools {
 	}
 
 	/**
+	 * returns a DN-string that is cleaned from not domain parts, e.g.
+	 * cn=foo,cn=bar,dc=foobar,dc=server,dc=org
+	 * becomes dc=foobar,dc=server,dc=org
+	 * @param string $dn
+	 * @return string
+	 */
+	public function getDomainDNFromDN($dn) {
+		$allParts = ldap_explode_dn($dn, 0);
+		$domainParts = array();
+		$dcFound = false;
+		foreach($allParts as $part) {
+			if(!$dcFound && strpos($part, 'dc=') === 0) {
+				$dcFound = true;
+			}
+			if($dcFound) {
+				$domainParts[] = $part;
+			}
+		}
+		$domainDN = implode(',', $domainParts);
+		return $domainDN;
+	}
+
+	/**
 	 * gives back the database table for the query
 	 * @param bool $isUser
 	 * @return string
@@ -1234,6 +1257,28 @@ class Access extends LDAPUtility implements user\IUserTools {
 		$hex_guid_to_guid_str .= '-' . substr($hex_guid, 20);
 
 		return strtoupper($hex_guid_to_guid_str);
+	}
+
+	/**
+	 * converts a binary SID into a string representation
+	 * @param string $sid
+	 * @return string
+	 * @link http://blogs.freebsdish.org/tmclaugh/2010/07/21/finding-a-users-primary-group-in-ad/#comment-2855
+	 */
+	public function convertSID2Str($sid) {
+		$srl = ord($sid[0]);
+		$numberSubID = ord($sid[1]);
+		$x = substr($sid, 2, 6);
+		$h = unpack('N', "\x0\x0" . substr($x,0,2));
+		$l = unpack('N', substr($x,2,6));
+		$iav = bcadd(bcmul($h[1], bcpow(2,32)), $l[1]);
+		$subIDs = array();
+		for ($i=0; $i<$numberSubID; $i++) {
+			$subID = unpack('V', substr($sid, 8+4*$i, 4));
+			$subIDs[] = $subID[1];
+		}
+
+		return sprintf('S-%d-%d-%s', $srl, $iav, implode('-', $subIDs));
 	}
 
 	/**
