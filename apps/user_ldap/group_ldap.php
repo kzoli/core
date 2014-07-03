@@ -136,10 +136,11 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 
 	/**
 	 * translates a primary group ID into an ownCloud internal name
-	 * @param string $gid
+	 * @param string $gid as given by primaryGroupID on AD
+	 * @param string $dn a DN that belongs to the same domain as the group
 	 * @return string|bool
 	 */
-	public function primaryGroupID2Name($gid) {
+	public function primaryGroupID2Name($gid, $dn) {
 		$cacheKey = 'primaryGroupIDtoName';
 		if($this->access->connection->isCached($cacheKey)) {
 			$groupNames = $this->access->connection->getFromCache($cacheKey);
@@ -148,12 +149,10 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 			}
 		}
 
-		$domainDN = $this->access->getDomainDNFromDN($this->access->connection->ldapBaseGroups[0]);
-		$objectSid = $this->access->readAttribute($domainDN, 'objectsid');
-		if(!is_array($objectSid) || empty($objectSid)) {
+		$domainObjectSid = $this->access->getSID($dn);
+		if($domainObjectSid === false) {
 			return false;
 		}
-		$domainObjectSid = $this->access->convertSID2Str($objectSid[0]);
 
 		//we need to get the DN from LDAP
 		$filter = $this->access->combineFilterWithAnd(array(
@@ -247,7 +246,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 	public function getUserPrimaryGroup($dn) {
 		$groupID = $this->getUserPrimaryGroupIDs($dn);
 		if($groupID !== false) {
-			$groupName = $this->primaryGroupID2Name($groupID);
+			$groupName = $this->primaryGroupID2Name($groupID, $dn);
 			if($groupName !== false) {
 				return $groupName;
 			}

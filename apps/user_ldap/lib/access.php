@@ -1260,6 +1260,29 @@ class Access extends LDAPUtility implements user\IUserTools {
 	}
 
 	/**
+	 * gets a SID of the domain of the given dn
+	 * @param string $dn
+	 * @return string|bool
+	 */
+	public function getSID($dn) {
+		$domainDN = $this->getDomainDNFromDN($dn);
+		$cacheKey = 'getSID-'.$domainDN;
+		if($this->connection->isCached($cacheKey)) {
+			return $this->connection->getFromCache($cacheKey);
+		}
+
+		$objectSid = $this->readAttribute($domainDN, 'objectsid');
+		if(!is_array($objectSid) || empty($objectSid)) {
+			$this->access->connection->writeToCache($cacheKey, false);
+			return false;
+		}
+		$domainObjectSid = $this->convertSID2Str($objectSid[0]);
+		$this->access->connection->writeToCache($cacheKey, $domainObjectSid);
+
+		return $domainObjectSid;
+	}
+
+	/**
 	 * converts a binary SID into a string representation
 	 * @param string $sid
 	 * @return string
