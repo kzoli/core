@@ -189,6 +189,10 @@ class Access extends LDAPUtility implements user\IUserTools {
 	 */
 	public function getDomainDNFromDN($dn) {
 		$allParts = ldap_explode_dn($dn, 0);
+		if($allParts === false) {
+			//not a valid DN
+			return '';
+		}
 		$domainParts = array();
 		$dcFound = false;
 		foreach($allParts as $part) {
@@ -1289,16 +1293,20 @@ class Access extends LDAPUtility implements user\IUserTools {
 	 * @link http://blogs.freebsdish.org/tmclaugh/2010/07/21/finding-a-users-primary-group-in-ad/#comment-2855
 	 */
 	public function convertSID2Str($sid) {
-		$srl = ord($sid[0]);
-		$numberSubID = ord($sid[1]);
-		$x = substr($sid, 2, 6);
-		$h = unpack('N', "\x0\x0" . substr($x,0,2));
-		$l = unpack('N', substr($x,2,6));
-		$iav = bcadd(bcmul($h[1], bcpow(2,32)), $l[1]);
-		$subIDs = array();
-		for ($i=0; $i<$numberSubID; $i++) {
-			$subID = unpack('V', substr($sid, 8+4*$i, 4));
-			$subIDs[] = $subID[1];
+		try {
+			$srl = ord($sid[0]);
+			$numberSubID = ord($sid[1]);
+			$x = substr($sid, 2, 6);
+			$h = unpack('N', "\x0\x0" . substr($x,0,2));
+			$l = unpack('N', substr($x,2,6));
+			$iav = bcadd(bcmul($h[1], bcpow(2,32)), $l[1]);
+			$subIDs = array();
+			for ($i=0; $i<$numberSubID; $i++) {
+				$subID = unpack('V', substr($sid, 8+4*$i, 4));
+				$subIDs[] = $subID[1];
+			}
+		} catch (\Exception $e) {
+			return '';
 		}
 
 		return sprintf('S-%d-%d-%s', $srl, $iav, implode('-', $subIDs));
