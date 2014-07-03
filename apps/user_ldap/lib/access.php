@@ -61,8 +61,8 @@ class Access extends LDAPUtility implements user\IUserTools {
 
 	/**
 	 * reads a given attribute for an LDAP record identified by a DN
-	 * @param $dn the record in question
-	 * @param $attr the attribute that shall be retrieved
+	 * @param string $dn the record in question
+	 * @param string $attr the attribute that shall be retrieved
 	 *        if empty, just check the record's existence
 	 * @param string $filter
 	 * @return array|false an array of values on success or an empty
@@ -1277,7 +1277,7 @@ class Access extends LDAPUtility implements user\IUserTools {
 
 		$objectSid = $this->readAttribute($domainDN, 'objectsid');
 		if(!is_array($objectSid) || empty($objectSid)) {
-			$this->access->connection->writeToCache($cacheKey, false);
+			$this->connection->writeToCache($cacheKey, false);
 			return false;
 		}
 		$domainObjectSid = $this->convertSID2Str($objectSid[0]);

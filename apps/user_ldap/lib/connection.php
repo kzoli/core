@@ -43,6 +43,12 @@ class Connection extends LDAPUtility {
 
 	protected $ignoreValidation = false;
 
+	//properties (incomplete)
+	/**
+	 * @property string ldapUserFilter
+	 * @property string ldapUserDisplayName
+	 */
+
 	/**
 	 * Constructor
 	 * @param ILDAPWrapper $ldap
