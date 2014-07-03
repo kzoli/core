@@ -199,7 +199,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 	 * @param string $dn
 	 * @return string|bool
 	 */
-	public function getGroupPrimaryGroupIDs($dn) {
+	public function getGroupPrimaryGroupID($dn) {
 		return $this->getEntryGroupID($dn, 'primaryGroupToken');
 	}
 
@@ -218,7 +218,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 	 * @return string[]
 	 */
 	public function getUsersInPrimaryGroup($groupDN, $limit = -1, $offset = 0) {
-		$groupID = $this->getGroupPrimaryGroupIDs($groupDN);
+		$groupID = $this->getGroupPrimaryGroupID($groupDN);
 		if($groupID === false) {
 			return array();
 		}
