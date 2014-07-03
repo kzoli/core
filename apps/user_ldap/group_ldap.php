@@ -170,12 +170,7 @@ class GROUP_LDAP extends BackendUtility implements \OCP\GroupInterface {
 		//directly read the display name attribute instead of the DN
 		$name = $this->access->dn2groupname($dn);
 
-		//cache and return
-		if(!isset($groupNames)) {
-			$groupNames = array();
-		}
-		$groupNames[$gid] = $name;
-		$this->access->connection->writeToCache($cacheKey, $groupNames);
+		$this->access->connection->writeToCache($cacheKey, $name);
 
 		return $name;
 	}
