@@ -1277,7 +1277,7 @@ class Access extends LDAPUtility implements user\IUserTools {
 			return false;
 		}
 		$domainObjectSid = $this->convertSID2Str($objectSid[0]);
-		$this->access->connection->writeToCache($cacheKey, $domainObjectSid);
+		$this->connection->writeToCache($cacheKey, $domainObjectSid);
 
 		return $domainObjectSid;
 	}
