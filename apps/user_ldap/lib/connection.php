@@ -23,6 +23,12 @@
 
 namespace OCA\user_ldap\lib;
 
+//magic properties (incomplete)
+/**
+ * responsible for LDAP connections in context with the provided configuration
+ * @property string ldapUserFilter
+ * @property string ldapUserDisplayName
+*/
 class Connection extends LDAPUtility {
 	private $ldapConnectionRes = null;
 	private $configPrefix;
@@ -42,12 +48,6 @@ class Connection extends LDAPUtility {
 	protected $doNotValidate = false;
 
 	protected $ignoreValidation = false;
-
-	//properties (incomplete)
-	/**
-	 * @property string ldapUserFilter
-	 * @property string ldapUserDisplayName
-	 */
 
 	/**
 	 * Constructor

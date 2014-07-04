@@ -28,6 +28,9 @@ namespace OCA\user_ldap\lib;
  * @package OCA\user_ldap\lib
  */
 class Access extends LDAPUtility implements user\IUserTools {
+	/**
+	 * @var OCA\user_ldap\lib\Connection
+	 */
 	public $connection;
 	public $userManager;
 	//never ever check this var directly, always use getPagedSearchResultState
