@@ -188,7 +188,7 @@ class Access extends LDAPUtility implements user\IUserTools {
 	 * @return string
 	 */
 	public function getDomainDNFromDN($dn) {
-		$allParts = ldap_explode_dn($dn, 0);
+		$allParts = $this->ldap->explodeDN($dn, 0);
 		if($allParts === false) {
 			//not a valid DN
 			return '';

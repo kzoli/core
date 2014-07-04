@@ -105,6 +105,11 @@ class Test_Access extends \PHPUnit_Framework_TestCase {
 		$inputDN = 'uid=zaphod,cn=foobar,dc=my,dc=server,dc=com';
 		$domainDN = 'dc=my,dc=server,dc=com';
 
+		$lw->expects($this->once())
+			->method('explodeDN')
+			->with($inputDN, 0)
+			->will($this->returnValue(explode(',', $inputDN)));
+
 		$this->assertSame($domainDN, $access->getDomainDNFromDN($inputDN));
 	}
 
@@ -114,6 +119,11 @@ class Test_Access extends \PHPUnit_Framework_TestCase {
 
 		$inputDN = 'foobar';
 		$expected = '';
+
+		$lw->expects($this->once())
+			->method('explodeDN')
+			->with($inputDN, 0)
+			->will($this->returnValue(false));
 
 		$this->assertSame($expected, $access->getDomainDNFromDN($inputDN));
 	}
