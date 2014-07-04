@@ -29,7 +29,7 @@ namespace OCA\user_ldap\lib;
  */
 class Access extends LDAPUtility implements user\IUserTools {
 	/**
-	 * @var OCA\user_ldap\lib\Connection
+	 * @var \OCA\user_ldap\lib\Connection
 	 */
 	public $connection;
 	public $userManager;
