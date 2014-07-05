@@ -1223,6 +1223,11 @@ class OC_Util {
 	 * If not, file_get_contents is used.
 	 */
 	public static function getUrlContent($url, $verifyCert = false) {
+		$crtPath = null;
+		if ($verifyCert) {
+			$crtPath = self::getCrtPathForUrl($url);
+		}
+
 		if (function_exists('curl_init')) {
 			$curl = curl_init();
 			$max_redirects = 10;
@@ -1234,6 +1239,10 @@ class OC_Util {
 			curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
 			curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
 			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $verifyCert);
+
+			if ($verifyCert && $crtPath) {
+				curl_setopt($curl, CURLOPT_CAINFO, $crtPath);
+			}
 
 			curl_setopt($curl, CURLOPT_USERAGENT, "ownCloud Server Crawler");
 			if(OC_Config::getValue('proxy', '') != '') {
@@ -1301,9 +1310,17 @@ class OC_Util {
 						'timeout' => 10
 					),
 					'ssl' => array(
-						'verify_peer' => $verifyCert
+						'verify_peer' => $verifyCert,
+						'SNI_enabled' => true
 					)
 				);
+
+				if (version_compare(PHP_VERSION, '5.4.13', '>=')) {
+					$contextArray['ssl']['disable_compression'] = true;
+				}
+				if ($verifyCert && $crtPath) {
+					$contextArray['ssl']['cafile'] = $crtPath;
+				}
 			}
 
 			$ctx = stream_context_create(
@@ -1313,6 +1330,33 @@ class OC_Util {
 
 		}
 		return $data;
+	}
+
+	/**
+	 * get a custom crt path to validate against based on url
+	 * @param $url
+	 * @return string|null
+	 */
+	private function getCrtPathForURL($url) {
+		$parsed_url = parse_url($url);
+		if (!isset($parsed_url['host'])) {
+			return null;
+		} else {
+			$host = $parsed_url['host'];
+		}
+
+		$crtPath = null;
+		switch ($host) {
+			case 'api.apps.owncloud.com':
+				$crtPath = __DIR__ . '../../core/certs/appstore.crt';
+				break;
+
+			default:
+				break;
+
+		}
+
+		return $crtPath;
 	}
 
 	/**
