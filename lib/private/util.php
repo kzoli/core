@@ -1334,7 +1334,7 @@ class OC_Util {
 
 	/**
 	 * get a custom crt path to validate against based on url
-	 * @param $url
+	 * @param string $url
 	 * @return string|null
 	 */
 	private function getCrtPathForURL($url) {
