@@ -1222,7 +1222,7 @@ class OC_Util {
 	 * This function get the content of a page via curl, if curl is enabled.
 	 * If not, file_get_contents is used.
 	 */
-	public static function getUrlContent($url, $verifyCert = true) {
+	public static function getUrlContent($url, $verifyCert = false) {
 		if (function_exists('curl_init')) {
 			$curl = curl_init();
 			$max_redirects = 10;

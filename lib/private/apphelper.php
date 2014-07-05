@@ -20,7 +20,7 @@ class AppHelper implements \OCP\IHelper {
 	 * @param bool $verifyCert Whether the SSL certificate should get verified (defaults to yes)
 	 * @return string the content of the webpage
 	 */
-	public function getUrlContent($url, $verifyCert = true) {
+	public function getUrlContent($url, $verifyCert = false) {
 		return \OC_Util::getUrlContent($url, $verifyCert);
 	}
 }
