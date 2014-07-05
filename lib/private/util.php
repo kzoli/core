@@ -1217,7 +1217,7 @@ class OC_Util {
 	/**
 	 * @Brief Get file content via curl.
 	 * @param string $url Url to get content
-	 * @param bool $verifyCert Whether the SSL certificate should get verified (defaults to yes)
+	 * @param bool $verifyCert Whether the SSL certificate should get verified (defaults to false)
 	 * @return string of the response or false on error
 	 * This function get the content of a page via curl, if curl is enabled.
 	 * If not, file_get_contents is used.
